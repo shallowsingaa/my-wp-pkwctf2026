@@ -1,6 +1,6 @@
 # My WriteUp - PKWCTF2026
 
->**参赛队伍：** `​SuperSpider`
+>**参赛队伍：** `SuperSpider`
 
 >**选手ID：** `sha11owSlng_Mz` 或 `shallowSingMz`（中途改名来着）
 
@@ -15,15 +15,15 @@
 ## 0x00 -> 目录
 
 - [My WriteUp - PKWCTF2026](#my-writeup---pkwctf2026)
-  - [0x00 -\> 目录](#0x00---目录)
-  - [0x01 -\> Web](#0x01---web)
+  - [0x00 -\> 目录](#0x00-->-目录)
+  - [0x01 -\> Web](#0x01-->-web)
     - [01. 签到题【入门】](#01-签到题入门)
     - [02. mio上传【入门】](#02-mio上传入门)
     - [03. 纸上谈兵【入门】](#03-纸上谈兵入门)
-  - [0x02 -\> Re](#0x02---re)
-  - [0x03 -\> Pwn](#0x03---pwn)
-  - [0x04 -\> Crypto](#0x04---crypto)
-  - [0x05 -\> Misc](#0x05---misc)
+  - [0x02 -\> Re](#0x02-->-re)
+  - [0x03 -\> Pwn](#0x03-->-pwn)
+  - [0x04 -\> Crypto](#0x04-->-crypto)
+  - [0x05 -\> Misc](#0x05-->-misc)
 
 ## 0x01 -> Web
 
@@ -35,7 +35,17 @@
 答案隐藏于页面的本源之中。常规的浏览方式无法寻觅，或许换一种途径能找到答案。
 ```
 
-*📌Solution :*
+
+
+*📌Solution_1 :*
+
+在网页地址栏前面加上 `view-source:`，回车可看到原始源码，往下翻能看到注释里有编码后的 flag，然后解法同下。
+
+
+
+*📌Solution_2 :*
+
+⚠️[网页中审查元素与查看网页源代码的区别_元素和源代码的区别-CSDN博客](https://blog.csdn.net/u010865136/article/details/109857046)（p.s. 我看了群里 wp 模板里签到题的解法，才知道去查一下这两种方式的区别...）
 
 F12 —— 元素 —— 找到奇怪的注释
 
@@ -45,13 +55,17 @@ F12 —— 元素 —— 找到奇怪的注释
 
 在 [CyperChef](https://cyberchef.org/) 用 base64 解码（From Base64）即可。
 
+
+
 *📌FLAG :*
 
 `PKWCTF{e42c700d-0d03-4d90-b7d3-5452393ebac7}`
 
+
+
 *📌Summary :*
 
-- 看网页源码的多种方式。
+- 看网页源码的多种方式（注意“审查元素”和“查看网页源代码”的区别）。
 - 对 base64 敏感。
 
 ---
@@ -91,6 +105,8 @@ mio的文件上传中心 ，来找找mio的密码
 </body>
 ```
 
+
+
 *📌Solution :*
 
 前端代码没发现异常，那么上传几个文件试试看。
@@ -105,7 +121,7 @@ curl -I http://80-e4629aaa-af77-4f1d-8ab4-a21bef30556e.challenge.ctfplus.cn/
 
 输出：
 
-![02-01](img-20260927132921_WindowsTerminal.jpg)
+![02-01](images/img-20260927132921_WindowsTerminal.jpg)
 
 重点是 Server 服务为 Apache，搜索相关可利用漏洞，再联想到网页里说的“PHP 文件是绝对禁止的”、“不过某些文件可能会影响服务器行为，请谨慎操作”，以及只拦截 php 文件，想到大概率是 `.htaccess` 文件的事儿。
 
@@ -127,9 +143,13 @@ AddType application/x-httpd-php .txt
 
 先后上传这两个文件，成功后访问路径 `/upload/payload.txt`，即可。
 
+
+
 *📌FLAG :*
 
 `PKWCTF{0aab29cc-be4d-46a8-9cb0-09089795d943}`
+
+
 
 *📌Summary :*
 
@@ -141,6 +161,73 @@ AddType application/x-httpd-php .txt
 ---
 
 ### 03. 纸上谈兵【入门】
+
+*📌Question :*
+
+```text
+网站提供了一个简单的信息登记功能，用户提交的内容会被后台解析并展示。管理员认为这只是普通的数据处理流程，不会带来安全问题。
+```
+
+```html
+<!-- 前端源码主要部分 -->
+<body>
+<div class="container">
+    <header>
+        <div class="badge">WelCTF 新生赛</div>
+        <h1>纸上谈兵</h1>
+        <p>这是一个简单的信息登记页面。管理员说，纸面上的内容只会被“正常解析”。</p>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2>信息登记</h2>
+            <p class="tips">请按照示例格式提交登记内容。</p>
+            <form method="post">
+                <textarea name="content" spellcheck="false">&lt;register&gt;
+    &lt;name&gt;guest&lt;/name&gt;
+    &lt;phone&gt;10086&lt;/phone&gt;
+    &lt;note&gt;第一次登记，请多关照。&lt;/note&gt;
+&lt;/register&gt;</textarea>
+                <button type="submit">提交登记</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>解析结果</h2>
+                            <div class="empty">暂无登记结果。</div>
+                    </section>
+    </main>
+
+    <footer>
+        <span>提示：flag 在服务器根目录下。</span>
+    </footer>
+</div>
+</body>
+```
+
+
+
+*📌Solution :*
+
+看到首页输入框里有示例 xml 并且可以自己编辑：
+
+```xml
+<register>
+    <name>guest</name>
+    <phone>10086</phone>
+    <note>第一次登记，请多关照。</note>
+</register>
+```
+
+通过查资料，想到大概率是 XXE 漏洞。
+
+
+
+*📌FLAG :*
+
+
+
+*📌Summary :*
 
 
 
