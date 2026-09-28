@@ -14,16 +14,11 @@
 
 ## 0x00 -> 目录
 
-- [My WriteUp - PKWCTF2026](#my-writeup---pkwctf2026)
-  - [0x00 -\> 目录](#0x00-->-目录)
-  - [0x01 -\> Web](#0x01-->-web)
-    - [01. 签到题【入门】](#01-签到题入门)
-    - [02. mio上传【入门】](#02-mio上传入门)
-    - [03. 纸上谈兵【入门】](#03-纸上谈兵入门)
-  - [0x02 -\> Re](#0x02-->-re)
-  - [0x03 -\> Pwn](#0x03-->-pwn)
-  - [0x04 -\> Crypto](#0x04-->-crypto)
-  - [0x05 -\> Misc](#0x05-->-misc)
+*（可点击跳转👇）*
+
+[TOC]
+
+
 
 ## 0x01 -> Web
 
@@ -445,6 +440,8 @@ confidential_docs:id,confidential_docs:doc_title,confidential_docs:doc_secret,us
 x" ununionion select id,doc_title,doc_secret,null from confidential_docs-- -
 ```
 
+![05-01](./images/img-20260928014250_msedge_compressed.jpg)
+
 
 
 *📌FLAG :*
@@ -462,9 +459,677 @@ x" ununionion select id,doc_title,doc_secret,null from confidential_docs-- -
 
 ### 06. 小虎鲸大冒险【入门】
 
+*📌Question :*
+
+```php
+<?php
+$pass1 = isset($_GET["ticket"])
+    && empty($_GET["ticket"])
+    && $_GET["ticket"] !== "";
+
+$pass2 = isset($_GET["depth"])
+    && strlen($_GET["depth"]) <= 4
+    && $_GET["depth"] > 1000;
+
+$pass3 = isset($_POST["song"])
+    && md5($_POST["song"]) == 0;
+
+if ($pass1 && $pass2 && $pass3) {
+    echo "小虎鲸成功回家！";
+    echo $flag;
+} else {
+    echo "小虎鲸还没有通过三关。";
+}
+```
+
+第一关：海草入口 ticket 未通过
+
+第二关：深海水压 depth 未通过
+
+第三关：鲸歌暗号 song 未通过
+
+小虎鲸还没有通过三关。
+
+
+
+*📌Solution :*
+
+第一关：目标是找一个值， `empty()` 为真，且 `!== ""` 为真。关键在于 php 的 `empty()` 把 `""` `"0"` `null` `[]` 都当作“空”。
+
+第二关：目标是找一个数长度≤四位，数值＞1000 （这个是不是本来想出长度＜4位？）。可以 9999 或者科学计数法（如 `2e9`）。
+
+第三关：post 传的一个字符串的 md5 值，在松散比较（==）下与数值 0 相等。关键在于 php 的 `md5()` 会返回 **32 位十六进制字符串**，且 php 在松散比较时，形如 `0e456123789` 的字符串会被当作科学计数法的数值。所以需要找一串 md5 值为 `0e` 开头的明文（网上搜即可）。
+
+最终 get 请求：
+
+```url
+http://80-065cf9f2-0f97-4caa-a8cf-d5a9569a980b.challenge.ctfplus.cn/?ticket=0&depth=9999
+```
+
+最终 post 请求：
+
+```text
+song=240610708
+```
+
+![06-01](./images/img-20260928024720_msedge_compressed.jpg)
+
+
+
+*📌FLAG :*
+
+`PKWCTF{7647c3ab-4b0a-4b3b-a177-6b16a1392df4}`
+
+
+
+*📌Summary :*
+
+- 了解 get 请求和 post 请求。
+- 了解基本 php 语法和特殊的 empty()、松散比较 等容易出问题的特性。
+- 有时候科学计数法代替数字有奇效。
+- 0e 开头的 md5 值有很多已公开的明文。
+
+---
+
+### 07. PKWSEC头像更新【入门】
+
+*📌Question :*
+
+```text
+PKWSEC 员工主页的头像上传功能刚做完测试，还挂在测试环境里。
+
+不愿意透露姓名的ddn同学说他已经加了防护。
+「应该没问题了」。
+
+嗯，应该。
+
+上传后的文件会放在 /uploads/ 目录下，文件名保持你提交的原样。
+```
+
+```html
+<!--仍然主要源码-->
+<body>
+<div class="wrap">
+    <div class="brand">
+        <div class="logo">PKW</div>
+        <h1>PKWSEC 员工主页 · 头像上传</h1>
+    </div>
+    <p class="sub">Profile Service v0.9 &nbsp;|&nbsp; 内网测试环境 &nbsp;|&nbsp; 上传目录 /uploads/</p>
+
+    <div class="notice">
+        <b>说明：</b>员工首页的头像上传功能刚做完测试，还挂在测试环境里。
+        开发同学说他已经加了两道防护：<b>一道拦危险后缀，一道检查文件真实内容</b>，
+        「应该没问题了」。<br>
+        上传后的文件放在 <code>/uploads/</code>，文件名保持你提交的原样。
+    </div>
+
+    <form method="POST" action="" enctype="multipart/form-data">
+        <input type="file" name="avatar" required>
+        <button type="submit">上传头像</button>
+    </form>
+
+    
+    <table>
+        <tr><th style="width:60%">已上传文件</th><th>大小</th></tr>
+                    <tr><td colspan="2" style="color:#6b7280">（还没有文件）</td></tr>
+            </table>
+
+    <footer>
+        PKWSEC 信息技术部 · 测试环境，每周五清空<br>
+        迁移记录：本功能由实习生交付，上线前未做安全测试。
+    </footer>
+</div>
+</body>
+```
+
+
+
+*📌Solution :*
+
+读题并实测后可知：
+
+1. 上传 waf 有两道防护：拦危险后缀（php, php3, phtml, pHp, phar等）、检查文件真实内容（MIME）。
+2. 上传的文件会保存在 `/uploads/` ，文件名保持原样。
+3. 各种暗示说明指定得有低级错误。
+4. 存在已上传文件列表，便于确认。
+
+所以要找 **后缀不在黑名单、且能被解析执行** 的文件。查询可知，`file`  `finfo` `mime_content_type` 这类库识别 GIF 时，主要看开头魔术字节 `GIF89a` ，而 PHP 解析器扫描的是 `<?php ... ?>` 。所以 gif 只要有 gif 头，其 MIME 就能被识别为 gif，在其尾部插入 php 代码片段也无妨。
+
+然后 `curl -I` 看一下，发现 server 是 nginx。通过查询，发现大概率是**Nginx + PHP-FPM 配置**漏洞，其原理为，在请求 `/uploads/poly.gif/xxx.php` 时（poly.gif 里有 php 代码）：
+
+1. URI 以 `.php` 结尾，命中 PHP 的 location，交给 PHP-FPM；
+2. Nginx 计算出的 `SCRIPT_FILENAME` 可能是  
+   `/var/www/html/uploads/poly.gif/xxx.php` ，但它发现这个路径**不存在**；
+3. 若 PHP 的 `cgi.fix_pathinfo=1`（常见默认行为），FPM 会沿路径回溯，找到实际存在的脚本文件；
+4. 实际存在的文件是 `/var/www/html/uploads/poly.gif`；
+5. 于是 **GIF 文件被 PHP 引擎执行**。
+
+将下面代码写入一个文本文档，保存时将文件名改为 `payload.gif` ：
+
+```
+GIF89a\n<?php echo "FLAG=".file_get_contents("/flag"); ?>
+```
+
+在网页中上传，然后访问 `/payload.gif/aaa.php` ，即可。
+
+![](./images/img-20260928112912_msedge_compressed.jpg)
+
+
+
+*📌FLAG :*
+
+`PKWCTF{c5bb725a-8849-46a9-977e-85da0fe30119}`
+
+
+
+*📌Summary :*
+
+- **上传题** 常用思路：把“我的代码”放到服务器上，然后想法子让服务器“执行”它。所以要考虑：
+  - 1、怎么把文件放进去；
+  - 2、怎么让服务器执行它（把它当脚本跑）。
+
+- Nginx + PHP-FPM 配置的路径回溯漏洞。
+- `file`  `finfo` `mime_content_type` 这类库识别 GIF 时，主要看开头魔术字节 `GIF89a` ，而 PHP 解析器扫描的是 `<?php ... ?>` 。
+
+---
+
+### 08. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 09. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 10. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 11. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 12. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 13. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 14. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 15. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 16. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 17. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 18. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 19. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 20. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 21. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 22. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 23. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 24. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 25. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 26. 
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
 
 
 ## 0x02 -> Re
+
+
 
 
 
@@ -472,8 +1137,27 @@ x" ununionion select id,doc_title,doc_secret,null from confidential_docs-- -
 
 
 
+
+
 ## 0x04 -> Crypto
 
 
 
+
+
 ## 0x05 -> Misc
+
+
+
+
+
+## 0x06 -> AI
+
+
+
+
+
+## 0x07 -> OSINT
+
+
+
