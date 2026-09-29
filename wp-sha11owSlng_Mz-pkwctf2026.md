@@ -1753,13 +1753,36 @@ Apache 默认会把请求的 UA（ `User-Agent` ）记进 `access.log`。所以�
 
 *📌Question :*
 
+```text
+开发同学上线网站时不小心把仓库也一并发布到了 Web 服务器。
+网站首页看起来平平无奇，但似乎隐藏着一份秘密文件
+```
 
+前端源码主要部分：
+
+```html
+<body>
+<h3>Did someone forget to clean git files?</h3>
+<p>Nothing here...</p>
+<!-- 仓库泄露  -->
+</body>
+```
 
 
 
 *📌Solution :*
 
+访问 `/.git/HEAD` 确认存在 git 泄露。
 
+拉取 `.git` 到本地：
+
+```bash
+pip install git-dumper
+
+git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/.git/" ./git
+```
+
+进入 git 文件夹，打开 `secret.php` ，发现写明了获取 flag 的方法，但存在不可见 unicode 字符。
 
 
 
@@ -1771,7 +1794,12 @@ Apache 默认会把请求的 UA（ `User-Agent` ）记进 `access.log`。所以�
 
 *📌Summary :*
 
-
+- `.git` 里保存了：
+  - `HEAD` / `refs/`：当前分支、所有分支指向哪个提交
+  - `logs/`：提交日志（谁、何时、提交了什么说明）
+  - `objects/`：**所有版本的文件内容**（zlib 压缩），即使文件后来被删了也能挖出来
+  - `index`：暂存区，记录文件路径与 blob 哈希的对应关系
+  - `COMMIT_EDITMSG`：最后一次提交说明
 
 ---
 
